@@ -1,0 +1,24 @@
+In order to make a new matlab file and get it to the github, we need a few things:
+
+1 - open the Github Desktop app
+
+2 - open matlab in the location of the cloned repository
+
+3 - create a new script
+
+4 - write script
+
+5 - save script in cloned repository
+
+6 - highlight script name, right click, go to source control, and click "add to git"
+
+7 - Once again, highlight script name, right click, go to source control, and click "view and commit"
+  You will be prompted to enter a message...this message should briefly describe the changes made.
+
+8 - Once again, highlight script name, right click, go to source control, and click "push" , then enter your Github username and password
+
+9 - the action above will push the changes to the local repository on your Github Desktop app
+
+10 - from the Github desktop app, allow that local changes to be made on the remote repository that exists on Github.com
+
+11 - If you are simply editing files rather than creating new ones, you do not need to do steps 3 through 6.
