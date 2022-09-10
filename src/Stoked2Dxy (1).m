@@ -12,7 +12,7 @@ J = 250 ;
 
 nu = 0.008926 ;
 mu = rho*nu ;
-
+% Eventually swap h with dx and dy
 h = ht/(J-1) ;
 deltaT = 0.125/nu*h^2 ;
 
