@@ -17,8 +17,8 @@ nu = 0.008926 ;
 
 
 
-nx = 1000;
-ny = 1000;
+nx = 81; % must be a perfect square
+ny = 81; % must be a perfect square
 N = 100;
 % Create indexing
 imin = 2;
@@ -39,6 +39,8 @@ dx = x(imin+1) - x(imin); % Basically just computing the distance between
 dy = y(jmin+1) - y(jmin);
 dxi = 1/dx;
 dyi = 1/dy;
+dxi2 = dxi^2;
+dyi2 = dyi^2;
 dt = 0.125/nu*dxi^2 ;
 % We precompute the division by dx and dy becasue division is a lot more
 % computationally expensive than multiplication
@@ -79,23 +81,23 @@ u(:,imin-1) = y.^2
 %  % We could just add in another generic loop here to make u keep going
 %  % and overriding itself, which would have the effect of the solution
 %  % marching forward in time
-% for j = jmin:jmax
-%     for i = imin+1:imax % why are we leaving node 2 out?
-%         v_here = 0.25*(v(i-1,j) + v(i,j) + v(i-1,j) + v(i,j+1));
-%         us(i,j) = u(i,j) + dt*(nu*((u(i-1,j)-2*u(i,j)+u(i+1,j))*dxi^2 + (u(i,j-1)-2*u(i,j)+u(i,j+1))*dyi^2) ... 
-%             - (u(i,j)*(u(i+1,j)-u(i-1,j))*0.5*dxi + v_here*(u(i,j+1)-u(i,j-1))*0.5*dyi));
-%     end
-%     u(i,imax+1) = u(i,imax); % Neumann BC (might be implmented wrong)
-% end
-% 
-% for j = jmin+1:jmax
-%     for i = imin:imax
-%         u_here = 0.25*(u(i,j-1) + u(i,j) + u(i+1,j-1) + u(i+1.j));
-%         vs(i,j) = v(i,j) + dt*(nu*((v(i-1,j)-2*v(i,j)+v(i+1,j))*dxi^2 + (v(i,j-1)-v*u(i,j)+v(i,j+1))*dyi^2) ... 
-%             -(u_here*(v(i+1,j)-v(i-1,j))*0.5*dxi + v(i,j)*(v(i,j+1)-v(i,j-1))*0.5*dyi);
-%     end
-%     v(i,jmax+1) = v(i,jmax); % Neumann BC (might be implemented wrong)
-% end
+for j = jmin:jmax
+    for i = imin+1:imax % why are we leaving node 2 out?
+        v_here = 0.25*(v(i-1,j) + v(i,j) + v(i-1,j) + v(i,j+1));
+        us(i,j) = u(i,j) + dt*(nu*((u(i-1,j)-2*u(i,j)+u(i+1,j))*dxi^2 + (u(i,j-1)-2*u(i,j)+u(i,j+1))*dyi^2) ... 
+            - (u(i,j)*(u(i+1,j)-u(i-1,j))*0.5*dxi + v_here*(u(i,j+1)-u(i,j-1))*0.5*dyi));
+    end
+    u(i,imax+1) = u(i,imax); % Neumann BC (might be implmented wrong)
+end
+
+for j = jmin+1:jmax
+    for i = imin:imax
+        u_here = 0.25*(u(i,j-1) + u(i,j) + u(i+1,j-1) + u(i+1.j));
+        vs(i,j) = v(i,j) + dt*(nu*((v(i-1,j)-2*v(i,j)+v(i+1,j))*dxi^2 + (v(i,j-1)-v*u(i,j)+v(i,j+1))*dyi^2) ... 
+            -(u_here*(v(i+1,j)-v(i-1,j))*0.5*dxi + v(i,j)*(v(i,j+1)-v(i,j-1))*0.5*dyi);
+    end
+    v(i,jmax+1) = v(i,jmax); % Neumann BC (might be implemented wrong)
+end
 
 % for n = 1:N-1
 %     for i = 2:J-1

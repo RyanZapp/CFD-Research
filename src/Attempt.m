@@ -25,8 +25,8 @@ u = zeros(J,J,N);
 v = zeros(J,J,N);
 
 [u0,v0] = initCond(x,y,h,J,L,ht);
-figure
-for i = 1:10
-    plot(u0(:,i),y)
-    hold on
+
+for i = 2:N
+    u(:,1,i) = u0(:,1);
+    v(:,1,i) = v0(:,1);
 end
