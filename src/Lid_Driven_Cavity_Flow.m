@@ -142,8 +142,8 @@ for ii = 1:nt
     end
     R = -rho/dt*(R1 + R2);
     R = R(:);
-    L(1,:) = 0;
-    L(1,1) = 1; % for some reason, this stopped the matrix from being singluar....now, the only issue is that, for some reason
+    %L(1,:) = 0;
+    %L(1,1) = 1; % for some reason, this stopped the matrix from being singluar....now, the only issue is that, for some reason
     % the velocity for u is degenerating at the top boundary to zero, so
     % the cavity flow quickly comes to a halt
     % I do not know if the entries of R will match up with the
@@ -194,4 +194,9 @@ for ii = 1:nt
 % Neumann B.C. in the loop and the top Neumann B.C. out of the loop
 
 % I honestly think that both can go outside of the loop
+
+
+
+% Bottom line is, the velocity values are exploding probably due to a
+% singularity sometwhere)
 end
