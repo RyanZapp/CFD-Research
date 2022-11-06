@@ -1,9 +1,17 @@
 clear
 close all
 clc
+% we should definitely make a separate testing file that has switch
+% statements and stuff
+
+% we should also make a file that uses for loops for the sake of learning
+
+% we should make a final file that uses vectorized forms for the sake of
+% speed
 rho = 1 ;
 nu = 0.008926 ;
-n = 150; % while we work with square regions, lets just set this for the sake of quick testing
+%nu = 1/300;
+n = 100; % while we work with square regions, lets just set this for the sake of quick testing
 nx = n;
 ny = n;
 Lx = 1;
@@ -17,12 +25,14 @@ dyi = 1/dy;
 dxi2 = dxi^2;
 dyi2 = dyi^2;
 
-nt = 1500; % max number of timesteps
+
+nt = 300; % max number of timesteps
 
 %dt = dx*dy/(nu*(dx + dy));% timestep size (determined by CFL condition)
 %dt = 0.125*dxi2/nu; % This is a backup timestep size in case the other one
 %fails
 dt = 0.001;
+dti = 1/dt;
 
 % Specify location of cell centers (this is where we will be plotting)
 xce = ((1:nx)-0.5)*dx; % length(xce) = nx
@@ -52,7 +62,8 @@ uco = zeros(nx+1,ny+1);
 % The pressure matrix (i.e. the Laplacian) depends only on the geometry of
 % the system, so we can initialize it outside of the loop to increase
 % efficiency
-
+% It seems like LI is the best option....I might want to make the pressure
+% matrix function create L as a sparse matrix, for the sake of storage
 L = pressure_matrix(nx,ny,dxi2,dyi2);
 % the things I did during this coding session were:
 % I took the inversion of L out of the loop, so that it only had to happen
@@ -66,14 +77,19 @@ L = pressure_matrix(nx,ny,dxi2,dyi2);
 % I see
 L(1,:) = 0;
 L(1,1) = 1; % I think the reason that some codes do this is to combat the problematic eigenvalue at the end
-% [V,~] = eig(L);
-% %LI = inv(L);
-% lambda = eig(L);
+% dont use linsolve because it does not fall under one of the opt
+% categories, so it will be much more efficient to let the computer choose
+%[V,~] = eig(L);
+LI = inv(L); % this is the old way I was inverting
+% Using this definitely speeds up the code and does
+%I = speye(size(L));
+% Im thinking that the pre backsolving might be the best move????
+%lambda = eig(L);
 % lambda(end) = [];
-% lambda_reciprocal = 1./lambda;
+%lambda_reciprocal = 1./lambda;
 % lambda_reciprocal(end+1) = 0; % use a pseudo inverse and set (1/lambda)=0 for lambda=0 
-% D1_inv = diag(lambda_reciprocal);
-% LI = transpose(V)*D1_inv*V;
+%D1_inv = diag(lambda_reciprocal);
+%LI = transpose(V)*D1_inv*V;
 % basically, we have 1 eigenvector that is essentially 0, and that is our
 % problem....Im not sure why it is zero, or if having a zero eigenvector is
 % bad....all i know is that it is our current issue
@@ -103,6 +119,7 @@ xlim([0 Lx]);
 ylim([0 Ly]);
 harrow = annotation('textarrow',[0.3 0.7],[0.96 0.96],"LineWidth",2);
 haxes = gca;
+%haxes.WindowState.maximized
 %haxes.XTick = [];
 %haxes.YTick = [];
 hold off
@@ -188,21 +205,7 @@ for ii = 1:nt
         end
         %us(:,1) = 2*ubcb - us(:,2);         % x-velocity bottom B.C.
     end
-    %us(:,end) = 2*ubct - us(:,end-1);   % x-velocity top B.C.
-    %us(1,:) = 0;                       % x-velocity left B.C.
-    %us(end,:) = 0;                     % x-velocity right B.C.
-    % we put the dirichlet B.C. again becasue the Neumann puts the velocity
-    % at the top corners of the box as being equal to the lid velocity,
-    % when in reality, we should have a no-slip at the corners.
-    % Reintroducing the Dirichlet B.C. fixes this issue
-    
-%     Lu = nu*dt*(Lux+Luy);
-%     Nu = dt*(Nux+Nuy);
-%     u(2:end-1,2:end-1) = u(2:end-1,2:end-1) + Lu - Nu; % this matches my modified us computation
-    % the only thing that "changes things" is when I remodify u later down
-    % the line0
-    
-    % solve for v* (u* does not satisfy the continuity equation)
+ 
     for j = 2:ny
         for i = 2:(nx+1)
             u_here = 0.25*(u(i,j+1) + u(i-1,j) + u(i,j) + u(i-1,j+1));
@@ -211,55 +214,54 @@ for ii = 1:nt
             Lvx(i-1,j-1) = (v(i-1,j)-2*v(i,j)+v(i+1,j))*dxi2;
             Lvy(i-1,j-1) = (v(i,j-1)-2*v(i,j)+v(i,j+1))*dyi2;
         end
-       % vs(1,:) = 2*vbcl - vs(2,:);         % y-velocity left B.C.
-       % vs(end,:) = 2*vbcr - vs(end-1,:);   % y-velocity right B.C.
     end
-   % vs(:,1) = 0;                       % y-velocity bottom B.C.
-   % vs(:,end) = 0;                     % y-velocity top B.C.
     Lv = nu*dt*(Lvx+Lvy);
     usce = (us(1:end-1,2:end-1)+us(2:end,2:end-1))/2;
     vsce = (vs(2:end-1,1:end-1)+vs(2:end-1,2:end))/2;
-%     for j = 2:(ny+1)
+    for j = 2:(ny+1)
+        for i = 1:nx
+            R1(i,j-1) = (us(i+1,j) - us(i,j))*dxi; % I think we only need to scale by dxi because the
+            % points are only a distance of dx away from each other
+        end
+    end
+    
+%     for j = 1:ny
 %         for i = 1:nx
-%             R1(i,j-1) = (us(i+1,j) - us(i,j))*dxi; % I think we only need to scale by dxi because the
-%             % points are only a distance of dx away from each other
+%             if (i ~= nx)
+%                 R1(i,j) = (usce(i+1,j)-usce(i,j))*dxi;
+%             else
+%                 R1(i,j) = (usce(i,j)-usce(i-1,j))*dxi;
+%             end
 %         end
 %     end
     
-    for j = 1:ny
-        for i = 1:nx
-            if (i ~= nx)
-                R1(i,j) = (usce(i+1,j)-usce(i,j))*dxi;
-            else
-                R1(i,j) = (usce(i,j)-usce(i-1,j))*dxi;
-            end
-        end
-    end
+    % long story short, all 3 methods seem to work
      % R1 messes up on the third iteration. It is already big on the third iteration, which means us is big on the third iteration, which means
     % u must have been made big at the end of the 2nd iteration
     
-%     for j = 1:ny
-%         for i = 2:(nx+1)
-%             R2(i-1,j) = (vs(i,j+1) - vs(i,j))*dyi; % we want to get values at the cell centers
-%         end
-%     end
-    
     for j = 1:ny
-        for i = 1:nx
-            if (j ~= ny)
-                R2(i,j) = (vsce(i,j+1)-vsce(i,j))*dyi;
-            else
-                R2(i,j) = (vsce(i,j)-vsce(i,j-1))*dyi;
-            end
+        for i = 2:(nx+1)
+            R2(i-1,j) = (vs(i,j+1) - vs(i,j))*dyi; % we want to get values at the cell centers
         end
     end
+    
+%     for j = 1:ny
+%         for i = 1:nx
+%             if (j ~= ny)
+%                 R2(i,j) = (vsce(i,j+1)-vsce(i,j))*dyi;
+%             else
+%                 R2(i,j) = (vsce(i,j)-vsce(i,j-1))*dyi;
+%             end
+%         end
+%     end
     % again, on the 3rd iteration, R3 is huge right from the get go, which means vs was huge when calculating it, which means
     % v must have been huge at the end of the 2nd iteration
-    R = -rho/dt*(R1 + R2); % R actually becomes huge at the 2nd passthrough
+    R = rho*dti*(R1 + R2); % R actually becomes huge at the 2nd passthrough
     % R is so huge, so it does not matter if L is small, since R is going
     % to accelerate the values anyways
+    % so it was the negative that was wrong
     R = R(:);
-    %R(1) = 0;
+   % R(1) = 0;
     %L(1,:) = 0;
     %L(1,1) = 1; % for some reason, this stopped the matrix from being singluar....now, the only issue is that, for some reason
     % the velocity for u is degenerating at the top boundary to zero, so
@@ -271,9 +273,9 @@ for ii = 1:nt
     % why dont they scale b by rho and dt???
     
     % Solve for p (using cosine transform, faster)
-    p = solvePoissonEquation_2dDCT(b,nx,ny,dx,dy); % this 
-   % p = L\R;
-    %p = LI*R; % Rather than using backslash, we can just invert the laplacian a single time before we ever enter the loop
+    %p = solvePoissonEquation_2dDCT(b,nx,ny,dx,dy); % this 
+    %p = L\R;
+    p = LI*R; % Rather than using backslash, we can just invert the laplacian a single time before we ever enter the loop
     % when i do L\R, I get a better looking result than when I spectrally
     % decompose L and invert it that way
     % In addition, when I use inv(L), it messes everything up, presumably
@@ -281,52 +283,54 @@ for ii = 1:nt
     % ends up happening is I get an all constant matrix, so "inv"
     % definitely is not the move...To double check, I should ask chris what
     % happens when he uses the inv command
-    %p = reshape(p,nx,ny); % p is huge at the 2nd go around, so thatt means 
+    p = reshape(p,nx,ny); % p is huge at the 2nd go around, so thatt means 
    % LL = inv(L); % L stays constant. R is the only thing that does not stay constant, so we can probably just "pre-invert"L
    % p(1,1) = 0;
     % after I fix L, I just need to add the pressure derivatives back into
     % the solution
-%     for j = 1:ny
-%         for i = 1:(nx-1)
-%             pu(i,j) = (p(i,j) + p(i+1,j))*0.5;
-%         end
-%     end
-%     for j = 1:(ny-1)
-%         for i = 1:nx
-%             pv(i,j) = (p(i,j) + p(i,j+1))*0.5;
-%         end
-%     end
-    for j = 2:(ny+1)
-        for i = 2:nx
-            u(i,j) = us(i,j) - 1/rho*(p(i,j-1) - p(i-1,j-1))*dxi; % I think this one is correct, but it would not hurt to double check
-        end % so pressure somehow becomes huge, which is what is influencing u to get huge, which in turn, influences us to get huge
-       %u(:,1) = 2*ubcb - u(:,2);
+    for j = 1:ny
+        for i = 1:(nx-1)
+            pu(i,j) = (p(i,j) + p(i+1,j))*0.5;
+        end
     end
-%     for j = 1:ny
-%         for i = 1:(nx-1)
-%             if (i ~= (nx-1))
-%                 dpx(i,j) = (pu(i+1,j)-pu(i,j))*dxi;
-%             else
-%                 dpx(i,j) = (pu(i,j)-pu(i-1,j))*dxi;
-%             end
-%         end
+    for j = 1:(ny-1)
+        for i = 1:nx
+            pv(i,j) = (p(i,j) + p(i,j+1))*0.5;
+        end
+    end
+% I want to check if my other pressure formulations work
+% but now that I know that 
+%     for j = 2:(ny+1)
+%         for i = 2:nx
+%             u(i,j) = us(i,j) - dt*(p(i,j-1) - p(i-1,j-1))*dxi; % I think this one is correct, but it would not hurt to double check
+%         end % so pressure somehow becomes huge, which is what is influencing u to get huge, which in turn, influences us to get huge
+%        %u(:,1) = 2*ubcb - u(:,2);
 %     end
-%     
-%     for j = 1:(ny-1)
-%         for i = 1:nx
-%             if (j ~= (ny-1))
-%                 dpy(i,j) = (pv(i,j+1)-pv(i,j))*dyi;
-%             else
-%                 dpy(i,j) = (pv(i,j)-pv(i,j-1))*dyi;
-%             end
-%         end
-%     end
+    for j = 1:ny
+        for i = 1:(nx-1)
+            if (i ~= (nx-1))
+                dpx(i,j) = (pu(i+1,j)-pu(i,j))*dxi;
+            else
+                dpx(i,j) = (pu(i,j)-pu(i-1,j))*dxi;
+            end
+        end
+    end
+    
+    for j = 1:(ny-1)
+        for i = 1:nx
+            if (j ~= (ny-1))
+                dpy(i,j) = (pv(i,j+1)-pv(i,j))*dyi;
+            else
+                dpy(i,j) = (pv(i,j)-pv(i,j-1))*dyi;
+            end
+        end
+    end
     %u(:,end) = 2*ubct - u(:,end-1);
  
     %u(1,:) = 0;
     %u(end,:) = 0;
-%   u(2:end-1,2:end-1) = us(2:end-1,2:end-1) - 1/rho*dpx(1:end,1:end);
-%   v(2:end-1,2:end-1) = vs(2:end-1,2:end-1) - 1/rho*dpy(1:end,1:end);
+   u(2:end-1,2:end-1) = us(2:end-1,2:end-1) - dt/rho*dpx(1:end,1:end);
+   v(2:end-1,2:end-1) = vs(2:end-1,2:end-1) - dt/rho*dpy(1:end,1:end);
 %   
 %     for j = 2:(ny+1)
 %         for i = 2:nx
@@ -339,18 +343,18 @@ for ii = 1:nt
 %             v(i,j) = vs(i,j) - dt/rho*dpy(i,j);
 %         end
 %     end
-    
-    for j = 2:ny
-        for i = 2:(nx+1)
-            % I think there should be a dt multiplying the pressure
-            % derivative
-            v(i,j) = vs(i,j) - 1/rho*(p(i-1,j) - p(i-1,j-1))*dyi; %I only need to divide by dy because the differencing 
-            % points are only dy apart, not 2dy apart (I was previously
-            % using 2dy because I was robotically using the central 
-        end
-         v(1,:) = 2*vbcl - v(2,:);         % y-velocity left B.C.
-         v(end,:) = 2*vbcr - v(end-1,:);   % y-velocity right B.C.
-    end
+%     
+%     for j = 2:ny
+%         for i = 2:(nx+1)
+%             % I think there should be a dt multiplying the pressure
+%             % derivative
+%             v(i,j) = vs(i,j) - dt*(p(i-1,j) - p(i-1,j-1))*dyi; %I only need to divide by dy because the differencing 
+%             % points are only dy apart, not 2dy apart (I was previously
+%             % using 2dy because I was robotically using the central 
+%         end
+%         % v(1,:) = 2*vbcl - v(2,:);         % y-velocity left B.C.
+%         % v(end,:) = 2*vbcr - v(end-1,:);   % y-velocity right B.C.
+%     end
 %     v(:,1) = 0;                     
 %     v(:,end) = 0;  
     % something weird is happening in the middle row of the v matrix
@@ -570,5 +574,67 @@ if (b>=1e-3)
     disp("The error occured during the following iteration:")
     disp(ii)
 end
+% we should ask luts why the chinese code does not shift divergence and
+% why they dont shift pressure to what I consider to be the proper location
+% for computation
 
+% I think we can definitely make another code that uses vector notation to
+% speed things up
+
+% also, we could have it read files to an output, then we could do post
+% processing with that output elsewhere If we wanted to get professional
+
+
+% We should probably make switch statements for the different ways of
+% formulating R...Whether to include dt vs not include dt (it seems like it
+% should be able to cancel, but the results are slightly different)
+
+% we should also test the fourier transform solution
+
+% we should also see if obtaining the pressure in the special way works
+
+
+% The bottom line is...the negative was what was wrong the whole time
+
+% using backslash solve, using FFT (probably), keeping dt, canceling dt,
+% using the suspect way of assembline the RHS of the poisson equation,
+% using my way of assembling the RHS of the poisson equation, adding back
+% in the pressure derivative in the suspect way from the chinese code,
+% adding the pressure derivative back in using my method......they all work
+%. The only difference is that they result in some slightly different
+%outputs in the pressure matrix (it doesnt seem to matter too much, but I
+%am a bit curious about why the differences are coming up) (is it like a
+%grid size thing? or is it something else?)
+
+% We should definitely play around and test these out
+
+% we should also play with reading the data to a different location that is
+% specific to handling outputs
+
+% We should also try to conceptualize an easy way of reading in initial
+% conditions and boundary conditions so that the solver can be robust
+
+% Finally, we should look into a way of generalizing flow around a cylinder
+% and what not, so this software can sort of be thought of as a general PDE
+% solver
+
+
+
+   %us(:,end) = 2*ubct - us(:,end-1);   % x-velocity top B.C.
+    %us(1,:) = 0;                       % x-velocity left B.C.
+    %us(end,:) = 0;                     % x-velocity right B.C.
+    % we put the dirichlet B.C. again becasue the Neumann puts the velocity
+    % at the top corners of the box as being equal to the lid velocity,
+    % when in reality, we should have a no-slip at the corners.
+    % Reintroducing the Dirichlet B.C. fixes this issue
+    
+%     Lu = nu*dt*(Lux+Luy);
+%     Nu = dt*(Nux+Nuy);
+%     u(2:end-1,2:end-1) = u(2:end-1,2:end-1) + Lu - Nu; % this matches my modified us computation
+    % the only thing that "changes things" is when I remodify u later down
+    % the line0
+    
+    % Note that the simulation actually works with gravity turned on as
+    % well
+    % solve for v* (u* does not satisfy the continuity equation)
 end
