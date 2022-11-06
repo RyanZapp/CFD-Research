@@ -218,42 +218,42 @@ for ii = 1:nt
     Lv = nu*dt*(Lvx+Lvy);
     usce = (us(1:end-1,2:end-1)+us(2:end,2:end-1))/2;
     vsce = (vs(2:end-1,1:end-1)+vs(2:end-1,2:end))/2;
-    for j = 2:(ny+1)
-        for i = 1:nx
-            R1(i,j-1) = (us(i+1,j) - us(i,j))*dxi; % I think we only need to scale by dxi because the
-            % points are only a distance of dx away from each other
-        end
-    end
-    
-%     for j = 1:ny
+%     for j = 2:(ny+1)
 %         for i = 1:nx
-%             if (i ~= nx)
-%                 R1(i,j) = (usce(i+1,j)-usce(i,j))*dxi;
-%             else
-%                 R1(i,j) = (usce(i,j)-usce(i-1,j))*dxi;
-%             end
+%             R1(i,j-1) = (us(i+1,j) - us(i,j))*dxi; % I think we only need to scale by dxi because the
+%             % points are only a distance of dx away from each other
 %         end
 %     end
+    % swap the R's we use
+    for j = 1:ny
+        for i = 1:nx
+            if (i ~= nx)
+                R1(i,j) = (usce(i+1,j)-usce(i,j))*dxi;
+            else
+                R1(i,j) = (usce(i,j)-usce(i-1,j))*dxi;
+            end
+        end
+    end
     
     % long story short, all 3 methods seem to work
      % R1 messes up on the third iteration. It is already big on the third iteration, which means us is big on the third iteration, which means
     % u must have been made big at the end of the 2nd iteration
     
-    for j = 1:ny
-        for i = 2:(nx+1)
-            R2(i-1,j) = (vs(i,j+1) - vs(i,j))*dyi; % we want to get values at the cell centers
-        end
-    end
-    
 %     for j = 1:ny
-%         for i = 1:nx
-%             if (j ~= ny)
-%                 R2(i,j) = (vsce(i,j+1)-vsce(i,j))*dyi;
-%             else
-%                 R2(i,j) = (vsce(i,j)-vsce(i,j-1))*dyi;
-%             end
+%         for i = 2:(nx+1)
+%             R2(i-1,j) = (vs(i,j+1) - vs(i,j))*dyi; % we want to get values at the cell centers
 %         end
 %     end
+    
+    for j = 1:ny
+        for i = 1:nx
+            if (j ~= ny)
+                R2(i,j) = (vsce(i,j+1)-vsce(i,j))*dyi;
+            else
+                R2(i,j) = (vsce(i,j)-vsce(i,j-1))*dyi;
+            end
+        end
+    end
     % again, on the 3rd iteration, R3 is huge right from the get go, which means vs was huge when calculating it, which means
     % v must have been huge at the end of the 2nd iteration
     R = rho*dti*(R1 + R2); % R actually becomes huge at the 2nd passthrough
