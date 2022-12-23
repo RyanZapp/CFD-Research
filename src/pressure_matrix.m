@@ -1,5 +1,6 @@
 function L = pressure_matrix(nx,ny,dxi2,dyi2)
 
+% Reference (P.7 OWKES)
 D = -2*(dxi2 + dyi2);
 Dx = -(dxi2 + 2*dyi2);
 Dy = -(2*dxi2 + dyi2);
