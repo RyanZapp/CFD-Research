@@ -15,7 +15,7 @@ fhat = dct(dct(b)')'; % Same as above (Needs Signal Processing Toolbox instead)
 phat = fhat./(MWX+MWY);
 
 % The solution is not unique (uhat(0,0) = inf);
-% Here we fix the mean ( with kx=0,ky=0) to be 0
+% Here we fix the mean (with kx=0,ky=0) to be 0
 phat(1,1) = 0;
 
 % Inverse 2D DCT
