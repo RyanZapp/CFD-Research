@@ -1,6 +1,7 @@
 clear
 close all
 clc
+
 % we should definitely make a separate testing file that has switch
 % statements and stuff
 % we should also make a file that uses for loops for the sake of learning
