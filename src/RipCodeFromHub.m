@@ -1,6 +1,7 @@
 clear
 close all
 clc
+
 Re = 300; % Reynolds number
 nt = 300; % max time steps (お試しで少しだけ)
 Lx = 1; Ly = 1; % domain size
