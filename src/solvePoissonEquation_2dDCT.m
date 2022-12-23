@@ -1,6 +1,7 @@
 function p = solvePoissonEquation_2dDCT(b,Nx,Ny,dx,dy)
 % Copyright 2020 The MathWorks, Inc.
 
+
 % modified wavenumber
 kx = 0:Nx-1;
 ky = 0:Ny-1;
