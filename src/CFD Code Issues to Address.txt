@@ -1,0 +1,26 @@
+Issues:
+1.) nx must equal ny (I need to remove this criteria)
+* My code can invert the non-square Laplacian using Moore-Penrose Pseudoinverse
+* However, The vector R does not match the size of the inverted Laplacian, so matrix-vector multiplication fails when nx!=ny
+
+* This is not a problem for the Chinese code, so I will need to look into that (since I need mine to work for a non-square grid)
+* Ive tried mldivide and some other things, and none have worked. I think it has to do with the way the Chinese code solves for p
+
+
+2.) Lx must equal Ly (I need to remove this criteria)
+
+* The Chinese code has no problem when Lx!=Ly
+* I am not sure why ours has such a problem when Lx and Ly are not equal.
+* I have a hunch that it might be because we use for loop notation, rather than vector notation, in our code.
+However, I will have to check that by using vector notation, but still keeping our poisson solver in play.
+
+* If that does nothing to the solution, then it might be the poisson solver
+
+
+3.) quiver does not work when the matrix outputs are not square (I need to make it possible to use)
+* I think I might be able to fix this by tuning "delta" in the code so that xx and yy are square, but I will have to explore deeper
+
+
+4.) It appears that the Chinese code can work for channel flow by simply switching the boundary conditions and nothing else
+* I need to check if their pressure matrix solver is a general colver that works for mutliple boundary conditions
+* If it is general, then I can use it to test solutions to other problems, like flow around a square, before trying to implement them in my own code
