@@ -5,7 +5,7 @@ clc
 Re = 300; % Reynolds number
 nt = 300; % max time steps (お試しで少しだけ)
 Lx = 1; Ly = 1; % domain size
-Nx = 50; Ny = 50; % Number of grids
+Nx = 51; Ny = 50; % Number of grids
 dt = 0.01; % time step;
 
 % Grid size (Equispaced)
