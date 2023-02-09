@@ -4,8 +4,8 @@ clc
 
 Re = 300; % Reynolds number
 nt = 300; % max time steps (お試しで少しだけ)
-Lx = 1; Ly = 1; % domain size
-Nx = 51; Ny = 50; % Number of grids
+Lx = 1.5; Ly = 1; % domain size
+Nx = 50; Ny = 50; % Number of grids
 dt = 0.01; % time step;
 
 % Grid size (Equispaced)
@@ -82,10 +82,10 @@ for ii = 1:nt
     b = ((u(2:end,2:end-1)-u(1:end-1,2:end-1))/dx ...
         + (v(2:end-1,2:end)-v(2:end-1,1:end-1))/dy); % this is just taking the sum of partial derivatives as the divergence
     % why dont they scale b by rho and dt???
-    
+    B = b(:);
     % Solve for p (using cosine transform, faster)
     p = solvePoissonEquation_2dDCT(b,Nx,Ny,dx,dy);
-    
+    P = p(:);
     % Direct method
     % p = solvePoissonEquation_direct(b,Nx,Ny,dx,dy);
     

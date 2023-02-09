@@ -1,0 +1,7 @@
+The work he did with hoy was really interesting because it allows me to touch finite element and finite volume methods, as well as turbulence closure models
+(AKA LES), plus, it was applied to solve a problem that has direct engineering applications (hypersonic vehicles). Also, it has underlying physics that
+you need to understand. Basically, it allows me to put my fingers in all of the pies, which I love
+
+
+
+I think I should read his other article about the passive mixing, and see if I like it. If not, I should just dive deeper into the articles he wrote with J Hoy

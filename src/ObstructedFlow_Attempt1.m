@@ -566,7 +566,7 @@ if (b>=1e-3)
     disp("The error occured during the following iteration:")
     disp(ii)
 end
-% we should ask luts why the chinese code does not shift divergence and
+% we should ask lutz why the chinese code does not shift divergence and
 % why they dont shift pressure to what I consider to be the proper location
 % for computation
 

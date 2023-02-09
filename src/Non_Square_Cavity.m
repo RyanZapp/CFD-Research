@@ -18,9 +18,14 @@ clc
 % Fluid Intrinsic Properties (This sets units for problem)
 rho = 1 ; % currently in (g/cm^3)
 nu = 0.008926 ; % currently in (cm^2/s)
-
+%nu = 1/300;
+% Next up, I need to test with Lx=1.5 and nu=1/300 with exact matches to
+% rip code from hub in order to accurately gage the match between my code
+% and theirs
 % Calculation mode for Ru and Rv (Default is F = 1)
-F = 1;
+F = 2;
+H = 2;
+% R matches b exactly when F = 2 
 
 % Initial Boundary Conditions, B.C. (u and v direction)
 ubcb = 0;
@@ -34,11 +39,11 @@ vbcr = 0;
 n = 100; 
 
 % Number of cells in x and y axis
-nx = n;
+nx = n+20;
 ny = n;
 
 % Dimensions of spatial domain
-Lx = 2;
+Lx = 1.5;
 Ly = 1;
 
 % "step" size in spatial domain
@@ -54,7 +59,7 @@ dyi2 = dyi^2;
 %% Time Domain Discretization - Indexing 
 
 % Max time steps
-nt = 300; 
+nt = 500; 
 
 dt = 0.001;
 dti = 1/dt;
@@ -85,6 +90,14 @@ vs = zeros(nx+2,ny+1); % "v-star"
 % Pressure 
 p = zeros(nx,ny);
 
+% Values corresponding to pressure
+pu = zeros(nx-1,ny);
+pv = zeros(nx,ny-1);
+
+% Storage of pressure field partial derivatives
+dpx = zeros(nx-1,ny);
+dpy = zeros(nx,ny-1);
+
 
 Ru = zeros(nx,ny);
 Rv = zeros(nx,ny);
@@ -98,18 +111,17 @@ vco = zeros(nx+1,ny+1);
 
 % Passes geometric data to separate function which returns the toeplitz pressure
 % matrix
-L = pressure_matrix(nx,ny,dxi2,dyi2);
+if H == 1
+    S = nx*ny; % Size of Laplacian
+    L = Neumann_pressure_matrix(S,nx,ny,dxi2,dyi2);
+    %L = pressure_matrix(nx,ny,dxi2,dyi2);
+    L(1,:) = 0;
+    L(1,1) = 1;
 
-L(1,:) = 0;
-L(1,1) = 1;
-S = size(L);
-
-% Invert the Laplacian (Pressure Matrix)
-if (S(1) == S(2))
+    % Invert the Laplacian (Pressure Matrix)
     LI = inv(L);
-else
-    LI = pinv(L);
 end
+
 
 % [POSSIBLE INTITIAL CONDITION IMPLEMENTATION]
 
@@ -132,7 +144,7 @@ ylim([0 Ly]);
 harrow = annotation('textarrow',[0.3 0.7],[0.96 0.96],"LineWidth",2);
 haxes = gca;
 
-hold off
+%hold off
 
 %% Outer Loop - Steps through "frames in time"  
 for ii = 1:nt
@@ -149,15 +161,19 @@ for ii = 1:nt
     v(end,:) = 2*vbcr - v(end-1,:);   % y-velocity right B.C.
    
     % Compute Boundary Conditions (B.C.) "Star" Matrices
-    us(:,1) = 2*ubcb - us(:,2);         % x-velocity bottom B.C.
-    us(:,end) = 2*ubct - us(:,end-1);   % x-velocity top B.C.
+    us(:,1) = 2*ubcb - u(:,2);         % x-velocity bottom B.C.
+    us(:,end) = 2*ubct - u(:,end-1);   % x-velocity top B.C.
     us(1,:) = 0;                        % x-velocity left B.C.
     us(end,:) = 0;                      % x-velocity right B.C.
     vs(:,1) = 0;                        % y-velocity bottom B.C.
     vs(:,end) = 0;                      % y-velocity top B.C.
-    vs(1,:) = 2*vbcl - vs(2,:);         % y-velocity left B.C.
-    vs(end,:) = 2*vbcr - vs(end-1,:);   % y-velocity right B.C.
-    
+    vs(1,:) = 2*vbcl - v(2,:);         % y-velocity left B.C.
+    vs(end,:) = 2*vbcr - v(end-1,:);   % y-velocity right B.C.
+    % setting us and vs boundary conditions using u and v, rather than
+    % using us and vs yields a solution that is exactly the same.
+    % The only difference is that using u and v makes the ghost nodes in
+    % this code match those in th Chinese code, so comparison becomes more
+    % obvious
     % Computing the u and v at the center of the cell will yield more accurate results 
     uce = (u(1:end-1,2:end-1) + u(2:end,2:end-1))/2;
     vce = (v(2:end-1,1:end-1) + v(2:end-1,2:end))/2;
@@ -283,17 +299,80 @@ for ii = 1:nt
     end
 
 %% Corrector Step I - Pressure Contribution
+   %  b = ((us(2:end,2:end-1)-us(1:end-1,2:end-1))/dx ...
+       %+ (vs(2:end-1,2:end)-vs(2:end-1,1:end-1))/dy); 
     
+    
+    % Solve for p (using cosine transform, faster)
+    %p = solvePoissonEquation_2dDCT(b,nx,ny,dx,dy);
     % Right Hand Side of Poisson Equation (EQ 6 OWKES)
     R = rho*dti*(Ru + Rv); % Summation of partial derviatives of component momentum functions
-    R = R(:);
+    if H == 1
+        R = R(:);
+        p = LI*R; % Inversion of Laplacian (EQ 17 OWKES)
+        p = reshape(p,nx,ny); % Reformulation as matrix
+    end
+    
+    % R takes care of rho and dt so I dont need them in the pressure
+    % equation
+    %u(2:end-1,2:end-1) = us(2:end-1,2:end-1) -  (p(2:end,:)-p(1:end-1,:))/dx;
+    %v(2:end-1,2:end-1) = vs(2:end-1,2:end-1) -  (p(:,2:end)-p(:,1:end-1))/dy;
+    % I think I need to make a separate loop for the edges of the pressure
+    % expression
+    
+    % Conquer this task tomorrow
+    % The 4 lines below properly populate the pressure values at the
+    % corners of the domain
+    
+    % The method below kinda ends up at the same place, but the solution
+    % process seems somewhat oscillatory
+    
+    % I think I need to fix the velocity vector plot in order to better
+    % diagnose this problem, but I think I might have to iterate over the
+    % pressure solutions or something?
+    if H == 2
+        for m = 1:150 % The iteration thing is DEFINITELY working..but why?
+            p(1,1) = 1/(dx^2+dy^2)*(p(2,1)*dy^2 + p(1,2)*dx^2 - dx^2*dy^2*R(1,1));
+            p(nx,1) = 1/(dx^2+dy^2)*(p(nx-1,1)*dy^2 + p(nx,2)*dx^2 - dx^2*dy^2*R(nx,1));
+            p(1,ny) = 1/(dx^2+dy^2)*(p(2,ny)*dy^2 + p(1,ny-1)*dx^2 - dx^2*dy^2*R(1,ny));
+            p(nx,ny) = 1/(dx^2+dy^2)*(p(nx-1,ny)*dy^2 + p(nx,ny-1)*dx^2 - dx^2*dy^2*R(nx,ny));
+            for j = 2:ny-1
+                p(1,j) = 1/(2*dx^2+dy^2)*(p(2,j)*dy^2 + (p(1,j+1)+p(1,j-1))*dx^2 - dx^2*dy^2*R(1,j)); % LHS
+            end
+
+            for j = 2:ny-1
+                p(nx,j) = 1/(2*dx^2+dy^2)*(p(nx-1,j)*dy^2 + (p(nx,j+1)+p(nx,j-1))*dx^2 - dx^2*dy^2*R(nx,j)); % RHS
+            end
+
+            for i = 2:nx-1
+                p(i,ny) = 1/(dx^2+2*dy^2)*(p(i,ny-1)*dx^2 + (p(i+1,ny)+p(i-1,ny))*dy^2 - dx^2*dy^2*R(i,ny)); %Top
+            end
+
+            for i = 2:nx-1
+                p(i,1) = 1/(dx^2+2*dy^2)*(p(i,2)*dx^2 + (p(i+1,1)+p(i-1,1))*dy^2 - dx^2*dy^2*R(i,1)); %Bot
+            end
+
+            for i = 2:nx-1
+                for j = 2:ny-1
+                    p(i,j) = 1/(dx^2+dy^2)*((p(i,j+1)+p(i,j-1))*0.5*dx^2 + (p(i+1,j)+p(i-1,j))*0.5*dy^2 - dx^2*dy^2*R(i,j));
+                end
+            end
+        end
+    end
+    % Ok, it kind of works...Looks bad, but definitely "works"
+    % I will need to investigate more:
+    % First, I will need to compare the matrix method with these settings
+    % Doing so will tell me if this method is identical
+    % Next, I need to see if iteration will be necessary
+    
     
     % Solution of Pressure Poisson Equation
-    p = LI*R; % Inversion of Laplacian (EQ 17 OWKES)
-    p = reshape(p,nx,ny); % Reformulation as matrix
+    %p = LI*R; % Inversion of Laplacian (EQ 17 OWKES)
+    %p = reshape(p,nx,ny); % Reformulation as matrix
     
     % Pressure Location
     % Places the node in the center of the cell in the u and v direction
+   
     for j = 1:ny
         for i = 1:(nx-1)
             pu(i,j) = (p(i,j) + p(i+1,j))*0.5;
@@ -332,9 +411,10 @@ for ii = 1:nt
     
     %Accounting for pressure, the evaluation satisfies continuity. The
     %intermediate steps are used to compute u and v in Corrector Step II.
-    
-%% Corrector Step II - Computing u and v using u-star and v-star (P.9, OWKES)
 
+%% Corrector Step II - Computing u and v using u-star and v-star (P.9, OWKES)
+% reintroduce the dt on top of rho when you finish comparing
+% I originally removed it because the DCT pressure solution does not use it
    u(2:end-1,2:end-1) = us(2:end-1,2:end-1) - dt/rho*dpx(1:end,1:end); 
    v(2:end-1,2:end-1) = vs(2:end-1,2:end-1) - dt/rho*dpy(1:end,1:end);  
 
@@ -346,8 +426,8 @@ for ii = 1:nt
         end
     end
                   
-uvis = uce;
-vvis = vce;
+%uvis = uce;
+%vvis = vce;
   
 %uvis_interp = interp2(Xce,Yce,uvis,xx,yy,'cubic');
 %vvis_interp = interp2(Xce,Yce,vvis,xx,yy,'cubic');
